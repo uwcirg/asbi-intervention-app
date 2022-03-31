@@ -20,14 +20,14 @@
               </thead>
               <tbody>
                 <tr>
-                  <td>{{yourDrinking.peer.name}}</td>
-                  <td>{{yourDrinking.peer.maximum_drinks_per_week}}</td>
-                  <td>{{yourDrinking.peer.maximum_drinks_per_day}}</td>
+                  <td>{{yourDrinking.peer ? yourDrinking.peer.name : ""}}</td>
+                  <td>{{yourDrinking.peer ? yourDrinking.peer.maximum_drinks_per_week: ""}}</td>
+                  <td>{{yourDrinking.peer ? yourDrinking.peer.maximum_drinks_per_day : ""}}</td>
                 </tr>
                 <tr>
                   <td>You</td>
-                  <td>{{yourDrinking.you.drinks_per_week}}</td>
-                  <td>{{yourDrinking.you.maximum_drinks_per_day}}</td>
+                  <td>{{yourDrinking.you ? yourDrinking.you.drinks_per_week: ""}}</td>
+                  <td>{{yourDrinking.you ? yourDrinking.you.maximum_drinks_per_day: ""}}</td>
                 </tr>
               </tbody>
             </table>
@@ -40,6 +40,7 @@
         <div id="column2" class="column">
           <div id="your-zone" class="decision-aid">
             <h3>Your drinking "Zone"</h3>
+
             <svg id="pyramid" viewBox="-5 -5 110 105">
               <defs>
                 <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -72,7 +73,7 @@
             </svg>
             <span v-html="yourZone.footnote"></span>
           </div>
-          <div id="zone-table" class="decision-aid">
+          <div id="zone-table" class="decision-aid" v-if="zoneTable">
             <h3>Zone table</h3>
             <table>
               <thead>
@@ -270,11 +271,15 @@ export default {
 
     // Unpack the alcohol brief interventions and assimilate into the component
     this.yourResponses = marked(decisionAids.your_responses);
-    this.yourDrinking = decisionAids.your_drinking;
-    if (this.yourDrinking.you.maximum_drinks_per_week.lower == this.yourDrinking.you.maximum_drinks_per_week.upper) {
-      this.yourDrinking.you.drinks_per_week = `${this.yourDrinking.you.maximum_drinks_per_week.lower}`;
-    } else {
-      this.yourDrinking.you.drinks_per_week = `${this.yourDrinking.you.maximum_drinks_per_week.lower}` + ' - ' + `${this.yourDrinking.you.maximum_drinks_per_week.upper}`;
+    if (decisionAids.your_drinking) {
+        this.yourDrinking = decisionAids.your_drinking;
+      if (this.yourDrinking.you) {
+        if (this.yourDrinking.you.maximum_drinks_per_week.lower == this.yourDrinking.you.maximum_drinks_per_week.upper) {
+          this.yourDrinking.you.drinks_per_week = `${this.yourDrinking.you.maximum_drinks_per_week.lower}`;
+        } else {
+          this.yourDrinking.you.drinks_per_week = `${this.yourDrinking.you.maximum_drinks_per_week.lower}` + ' - ' + `${this.yourDrinking.you.maximum_drinks_per_week.upper}`;
+        }
+      }
     }
     this.yourZone = {
       number: decisionAids.your_zone.number,

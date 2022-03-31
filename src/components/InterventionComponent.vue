@@ -1,7 +1,7 @@
 <template>
   <div id="interventionElement">
     <h1>DEMO ASBI CDS: Brief Intervention App</h1>
-    <div v-if="ready">
+    <div v-if="ready && alcoholScreeningResultsSummary">
 
         <div>
           <h2>Alcohol Screening Summary</h2>
@@ -60,6 +60,7 @@
         </details>
 
     </div>
+    <div v-else>No content to show</div>
   </div>
 </template>
 
