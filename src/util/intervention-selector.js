@@ -1,9 +1,3 @@
-
-// import questionnaireUsAudit from '../fhir/Questionnaire-USAUDIT.json';
-// import questionnaireWhoAudit from '../fhir/Questionnaire-WHOAUDIT.json';
-// import questionnaireNidaQs from '../fhir/Questionnaire-NIDAQS2USAUDIT.json';
-// import elmJsonBriefIntervention from '../cql/BriefInterventionLogicLibrary.json';
-// import elmJsonDecisionAid from '../cql/DecisionAidLogicLibrary.json';
 import valueSetJson from '../cql/valueset-db.json';
 export async function getIntervention() {
   let intervention = process.env.VUE_APP_INTERVENTION ? process.env.VUE_APP_INTERVENTION.toLowerCase() : "";
