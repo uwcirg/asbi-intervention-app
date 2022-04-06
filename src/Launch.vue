@@ -1,6 +1,7 @@
 <template>
-  <div id="launch">
-  </div>
+  <v-app>
+    <div id="launch">Loading...</div>
+  </v-app>
 </template>
 
 <script>

@@ -1,12 +1,12 @@
 <template>
   <div id="interventionElement">
-    <h1>DEMO ASBI CDS: Decision Aid App</h1>
     <div v-if="ready">
       <div class="row">
         <div id="column1" class="column">
           <div id="your-responses" class="decision-aid">
             <h3>Your Responses</h3>
             <span v-html="yourResponses"></span>
+             <v-alert type="warning" dense outlined class="ma-2" v-if="!yourResponses">No response provided</v-alert>
           </div>
           <div id="your-drinking" class="decision-aid">
             <h3>{{yourDrinking.title}}</h3>
@@ -19,15 +19,15 @@
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>{{yourDrinking.peer.name}}</td>
-                  <td>{{yourDrinking.peer.maximum_drinks_per_week}}</td>
-                  <td>{{yourDrinking.peer.maximum_drinks_per_day}}</td>
+                <tr v-if="yourDrinking.peer">
+                  <td>{{yourDrinking.peer.name ? yourDrinking.peer.name: "N/A"}}</td>
+                  <td>{{yourDrinking.peer.maximum_drinks_per_week ? yourDrinking.peer.maximum_drinks_per_week: "N/A"}}</td>
+                  <td>{{yourDrinking.peer.maximum_drinks_per_day ? yourDrinking.peer.maximum_drinks_per_day : "N/A"}}</td>
                 </tr>
                 <tr>
                   <td>You</td>
-                  <td>{{yourDrinking.you.drinks_per_week}}</td>
-                  <td>{{yourDrinking.you.maximum_drinks_per_day}}</td>
+                  <td>{{yourDrinking.you && yourDrinking.you.drinks_per_week ? yourDrinking.you.drinks_per_week : "N/A" }}</td>
+                  <td>{{yourDrinking.you && yourDrinking.you.maximum_drinks_per_day ? yourDrinking.you.maximum_drinks_per_day : "N/A"}}</td>
                 </tr>
               </tbody>
             </table>
@@ -84,24 +84,24 @@
               </thead>
               <tbody>
                 <tr>
-                  <td>{{zoneTable.one.name}}</td>
-                  <td>{{zoneTable.one.score}}</td>
-                  <td>{{zoneTable.one.description}}</td>
+                  <td>{{zoneTable.one ? zoneTable.one.name : "N/A"}}</td>
+                  <td>{{zoneTable.one ? zoneTable.one.score : "N/A"}}</td>
+                  <td>{{zoneTable.one ? zoneTable.one.description : "N/A"}}</td>
                 </tr>
                 <tr>
-                  <td>{{zoneTable.two.name}}</td>
-                  <td>{{zoneTable.two.score}}</td>
-                  <td>{{zoneTable.two.description}}</td>
+                  <td>{{zoneTable.two ? zoneTable.two.name : "N/A"}}</td>
+                  <td>{{zoneTable.two ? zoneTable.two.score : "N/A"}}</td>
+                  <td>{{zoneTable.two ? zoneTable.two.description: "N/A"}}</td>
                 </tr>
                 <tr>
-                  <td>{{zoneTable.three.name}}</td>
-                  <td>{{zoneTable.three.score}}</td>
-                  <td>{{zoneTable.three.description}}</td>
+                  <td>{{zoneTable.three ? zoneTable.three.name : "N/A"}}</td>
+                  <td>{{zoneTable.three ? zoneTable.three.score : "N/A"}}</td>
+                  <td>{{zoneTable.three ? zoneTable.three.description: "N/A"}}</td>
                 </tr>
                 <tr>
-                  <td>{{zoneTable.four.name}}</td>
-                  <td>{{zoneTable.four.score}}</td>
-                  <td>{{zoneTable.four.description}}</td>
+                  <td>{{zoneTable.four ? zoneTable.four.name : "N/A"}}</td>
+                  <td>{{zoneTable.four ? zoneTable.four.score : "N/A"}}</td>
+                  <td>{{zoneTable.four ? zoneTable.four.description : "N/A"}}</td>
                 </tr>
               </tbody>
             </table>
@@ -124,46 +124,18 @@
 
 <script>
 
-import { getIntervention } from '../util/intervention-selector.js';
-import Worker from "../../node_modules/cql-worker/src/cql.worker.js"; // https://github.com/webpack-contrib/worker-loader
-import { initialzieCqlWorker } from 'cql-worker';
-import FHIR from 'fhirclient';
-import { getObservationCategories } from '../util/util.js';
 import { marked } from 'marked';
 
-// Load the Questionniare, CQL ELM JSON, and value set cache which represents the alcohol intervention
-const [questionnaires, elmJson, valueSetJson, namedExpression] = getIntervention();
-
-// Top level definition of our FHIR client
-var client;
-
-// Define a web worker for evaluating CQL expressions
-const cqlWorker = new Worker();
-
-// Assemble the parameters needed by the CQL
-let cqlParameters = {};
-
-// Initialize the cql-worker
-let [setupExecution, sendPatientBundle, evaluateExpression] = initialzieCqlWorker(cqlWorker);
-
-// Send the cqlWorker an initial message containing the ELM JSON representation of the CQL expressions
-setupExecution(elmJson, valueSetJson, cqlParameters);
-
-// Add the Questionnaires to the patient bundle.
-var patientBundle = {
-  resourceType: 'Bundle',
-  id: 'survey-bundle',
-  type: 'collection',
-  entry: []
-};
-if (questionnaires.length > 0) {
-  questionnaires.forEach(questionnaire => {
-    patientBundle.entry.push({resource: questionnaire});
-  });
-}
-
-// Define the survey component for Vue
+// Define the component for Vue
 export default {
+  props: {
+    intervention: Object
+  },
+  watch: {
+    'intervention': function() {
+      this.interventionCallback();
+    }
+  },
   data() {
     // Properties are populated after mount; see mounted() below.
     return {
@@ -177,133 +149,59 @@ export default {
       ready: false // Indicate we are not yet ready for the component to render
     };
   },
-  async mounted() {
-    // Wait for authorization
-    client = await FHIR.oauth2.ready();
+  methods: {
+    interventionCallback() {
+      // Have the web worker evaluate the CQL and return the brief interventions
+      let decisionAids = this.intervention;
 
-    // Get the Patient resource
-    let pid = await client.patient.read().then(function(pt) {
-      if (pt) patientBundle.entry.unshift({resource: pt});
-      return pt.id;
-    });
-
-    // Get any Condition resources
-    await client.request('/Condition?patient=' + pid).then(function(cd) {
-      if (cd) {
-        if (cd.resourceType == 'Bundle' && cd.entry) {
-          cd.entry.forEach(c => {
-            if (c.resource) patientBundle.entry.push({resource: c.resource});
-          });
-        } else if (Array.isArray(cd)) {
-          cd.forEach(c => {
-            if (c.resourceType) patientBundle.entry.push({resource: c});
-          });
-        } else {
-          patientBundle.entry.push({resource: cd});
+      // Unpack the alcohol brief interventions and assimilate into the component
+      this.yourResponses = decisionAids.your_responses ? marked(decisionAids.your_responses) : "";
+      if (decisionAids.your_drinking) {
+          this.yourDrinking = decisionAids.your_drinking;
+        if (this.yourDrinking.you && this.yourDrinking.you.maximum_drinks_per_week) {
+          if (this.yourDrinking.you.maximum_drinks_per_week.lower == this.yourDrinking.you.maximum_drinks_per_week.upper) {
+            this.yourDrinking.you.drinks_per_week = `${this.yourDrinking.you.maximum_drinks_per_week.lower}`;
+          } else {
+            this.yourDrinking.you.drinks_per_week = `${this.yourDrinking.you.maximum_drinks_per_week.lower}` + ' - ' + `${this.yourDrinking.you.maximum_drinks_per_week.upper}`;
+          }
         }
       }
-    });
-    
-    // Get any Observation resources
-    let observationQueryString = `/Observation?patient=${pid}`;
-    // Optionally request Observations using categories
-    if (process.env.VUE_APP_FHIR_OBSERVATION_CATEGORY_QUERIES.toLowerCase() == 'true') {
-      getObservationCategories().forEach(cat => {
-        observationQueryString = observationQueryString + '&category=' + cat;
-      });
+      if (decisionAids.your_zone) {
+        this.yourZone = {
+          number: decisionAids.your_zone.number,
+          romanRomanNumeral: decisionAids.your_zone.roman_numeral,
+          zoneLabels: {
+            one: marked(decisionAids.your_zone.zone_labels.one),
+            two: marked(decisionAids.your_zone.zone_labels.two),
+            three: marked(decisionAids.your_zone.zone_labels.three),
+            four: marked(decisionAids.your_zone.zone_labels.four)
+          },
+          footnote: marked(decisionAids.your_zone.footnote)
+        };
+      }
+      this.whatCountsAsADrink = decisionAids.what_counts_as_a_drink;
+      this.whenDrinkingIsRisky = marked(decisionAids.when_drinking_is_risky);
+      this.forAdditionalInfo = marked(decisionAids.for_additional_info);
+      this.zoneTable = {
+        one: decisionAids.zone_table.definitions.zone_one,
+        two: decisionAids.zone_table.definitions.zone_two,
+        three: decisionAids.zone_table.definitions.zone_three,
+        four: decisionAids.zone_table.definitions.zone_four
+      };
+
+      // We don't show this component until `ready=true`
+      this.ready = true;
     }
-    await client.request(observationQueryString).then(function(ob) {
-      if (ob) {
-        if (ob.resourceType == 'Bundle' && ob.entry) {
-          ob.entry.forEach(o => {
-            if (o.resource) patientBundle.entry.push({resource: o.resource});
-          });
-        } else if (Array.isArray(ob)) {
-          ob.forEach(o => {
-            if (o.resourceType) patientBundle.entry.push({resource: o});
-          });
-        } else {
-          patientBundle.entry.push({resource: ob});
-        }
-      }
-    });
-
-    // Get any Procedure resources
-    await client.request('/Procedure?patient=' + pid).then(function(pr) {
-      if (pr) {
-        if (pr.resourceType == 'Bundle' && pr.entry) {
-          pr.entry.forEach(p => {
-            if (p.resource) patientBundle.entry.push({resource: p.resource});
-          });
-        } else if (Array.isArray(pr)) {
-          pr.forEach(p => {
-            if (p.resourceType) patientBundle.entry.push({resource: p});
-          });
-        } else {
-          patientBundle.entry.push({resource: pr});
-        }
-      }
-    });
-
-    // Get any QuestionnaireResponse resources
-    await client.request('/QuestionnaireResponse?patient=' + pid).then(function(qr) {
-      if (qr) {
-        if (qr.resourceType == 'Bundle' && qr.entry) {
-          qr.entry.forEach(q => {
-            if (q.resource) patientBundle.entry.push({resource: q.resource});
-          });
-        } else if (Array.isArray(qr)) {
-          qr.forEach(q => {
-            if (q.resourceType) patientBundle.entry.push({resource: q});
-          });
-        } else {
-          patientBundle.entry.push({resource: qr});
-        }
-      }
-    });
-
-    // Send the patient bundle to the CQL web worker
-    sendPatientBundle(patientBundle);
-
-    // Have the web worker evaluate the CQL and return the brief interventions
-    let decisionAids = await evaluateExpression(namedExpression);
-
-    // Unpack the alcohol brief interventions and assimilate into the component
-    this.yourResponses = marked(decisionAids.your_responses);
-    this.yourDrinking = decisionAids.your_drinking;
-    if (this.yourDrinking.you.maximum_drinks_per_week.lower == this.yourDrinking.you.maximum_drinks_per_week.upper) {
-      this.yourDrinking.you.drinks_per_week = `${this.yourDrinking.you.maximum_drinks_per_week.lower}`;
-    } else {
-      this.yourDrinking.you.drinks_per_week = `${this.yourDrinking.you.maximum_drinks_per_week.lower}` + ' - ' + `${this.yourDrinking.you.maximum_drinks_per_week.upper}`;
-    }
-    this.yourZone = {
-      number: decisionAids.your_zone.number,
-      romanRomanNumeral: decisionAids.your_zone.roman_numeral,
-      zoneLabels: {
-        one: marked(decisionAids.your_zone.zone_labels.one),
-        two: marked(decisionAids.your_zone.zone_labels.two),
-        three: marked(decisionAids.your_zone.zone_labels.three),
-        four: marked(decisionAids.your_zone.zone_labels.four)
-      },
-      footnote: marked(decisionAids.your_zone.footnote)
-    };
-    this.whatCountsAsADrink = decisionAids.what_counts_as_a_drink;
-    this.whenDrinkingIsRisky = marked(decisionAids.when_drinking_is_risky);
-    this.forAdditionalInfo = marked(decisionAids.for_additional_info);
-    this.zoneTable = {
-      one: decisionAids.zone_table.definitions.zone_one,
-      two: decisionAids.zone_table.definitions.zone_two,
-      three: decisionAids.zone_table.definitions.zone_three,
-      four: decisionAids.zone_table.definitions.zone_four
-    };
-
-    // We don't show this component until `ready=true`
-    this.ready = true;
   }
 };
 </script>
 
 <style>
+#interventionElement {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 .row {
   display: flex;
 }
