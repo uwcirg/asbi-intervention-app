@@ -10,7 +10,7 @@
     <v-main>
       <v-container fluid>
         <v-progress-circular
-        :value="100"
+        :value="160"
         indeterminate
         color="primary"
         v-if="!error && !ready"

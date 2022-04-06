@@ -197,6 +197,11 @@ export default {
 </script>
 
 <style>
+#interventionElement {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 .row {
   display: flex;
 }
