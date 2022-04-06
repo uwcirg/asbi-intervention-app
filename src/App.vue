@@ -1,16 +1,33 @@
 <template>
   <v-app>
-    <v-app-bar dark color="primary" elevation=2 app><v-toolbar-title>{{title}}</v-toolbar-title></v-app-bar>
+    <v-app-bar
+      dark
+      color="primary"
+      elevation=2
+      app>
+      <v-toolbar-title>{{title}}</v-toolbar-title>
+    </v-app-bar>
     <v-main>
       <v-container fluid>
-        <v-progress-circular :value="100" v-if="!error && !ready" indeterminate
-        color="primary"></v-progress-circular>
+        <v-progress-circular
+        :value="100"
+        indeterminate
+        color="primary"
+        v-if="!error && !ready"
+        ></v-progress-circular>
         <div id="app">
-          <InterventionComponent :intervention="intervention" v-if="interventionType=='briefintervention'"/>
-          <DecisionAidComponent :intervention="intervention" v-if="interventionType=='decisionaid'"/>
+          <InterventionComponent
+            :intervention="intervention"
+            v-if="interventionType=='briefintervention'"/>
+          <DecisionAidComponent
+            :intervention="intervention"
+            v-if="interventionType=='decisionaid'"/>
           <div v-if="!interventionType">No intervention specified</div>
         </div>
-        <v-alert color="error" v-if="error" dark>
+        <v-alert
+          color="error"
+          dark
+          v-if="error">
           Error loading the summary.  See console for detail.
           <div v-html="error"></div>
         </v-alert>
@@ -35,7 +52,8 @@ const cqlWorker = new Worker();
 let cqlParameters = {};
 // Initialize the cql-worker
 let [setupExecution, sendPatientBundle, evaluateExpression] = initialzieCqlWorker(cqlWorker);
-let titles = {
+const interventionType = process.env.VUE_APP_INTERVENTION ? process.env.VUE_APP_INTERVENTION.toLowerCase() : '';
+const titles = {
   'decisionaid': 'DEMO ASBI CDS: Decision Aid App',
   'briefintervention': 'DEMO ASBI CDS: Brief Intervention App'
 };
@@ -46,8 +64,12 @@ export default {
     InterventionComponent,
     DecisionAidComponent
   },
+  watch: {
+    'intervention': function() {
+      this.ready = true;
+    }
+  },
   data: function() {
-    let interventionType = process.env.VUE_APP_INTERVENTION ? process.env.VUE_APP_INTERVENTION.toLowerCase() : '';
     return {
       interventionType: interventionType,
       title: 
@@ -70,12 +92,13 @@ export default {
       client = result;
       if (this.error) return; // auth error, cannot continue
       this.setPatient().then((pt) => {
+        if (this.error) return;
         if (pt) {
           this.patientBundle.entry.unshift({resource: pt});
           this.patientId = pt.id;
         }
-        if (this.error) return;
         this.getFhirResources().then(() => {
+          if (this.error || !this.patientId) return;
           getIntervention().then(data => {
             // Load the Questionniare, CQL ELM JSON, and value set cache which represents the alcohol intervention
             const [questionnaires, elmJson, valueSetJson, namedExpression] = data;
@@ -90,7 +113,6 @@ export default {
             }
             sendPatientBundle(self.patientBundle);
             self.handleEvalExpression(namedExpression);
-            self.ready = true;
           }).catch(e => {
             self.error = e;
             console.log("Questionnaire error ", e);

@@ -6,12 +6,15 @@
           <div>{{alcoholScreeningResultsSummary.summary}}</div>
           <details>
             <summary>Responses</summary>
-            <ul>
-              <li v-for="response in alcoholScreeningResultsSummary.responses" :key="response.question">
-                <div class="question">{{response.question}}</div>
-                <div class="response">{{response.answer}}</div>
-              </li>
-            </ul>
+            <div>
+              <ul>
+                <li v-for="response in alcoholScreeningResultsSummary.responses" :key="response.question">
+                  <div class="question">{{response.question}}</div>
+                  <div class="response">{{response.answer}}</div>
+                </li>
+              </ul>
+              <v-alert type="warning" dense outlined class="ma-2" v-if="!alcoholScreeningResultsSummary.responses || !alcoholScreeningResultsSummary.responses.length">No responses</v-alert>
+            </div>
           </details>
         </div>
         <details>
@@ -34,12 +37,15 @@
           <div>{{nonAlcoholScreeningResultsSummary.summary}}</div>
           <details>
             <summary>Responses</summary>
-            <ul>
-              <li v-for="response in nonAlcoholScreeningResultsSummary.responses" :key="response.question">
-                <div class="question">{{response.question}}</div>
-                <div class="response">{{response.answer}}</div>
-              </li>
-            </ul>
+            <div>
+              <ul>
+                <li v-for="response in nonAlcoholScreeningResultsSummary.responses" :key="response.question">
+                  <div class="question">{{response.question}}</div>
+                  <div class="response">{{response.answer}}</div>
+                </li>
+              </ul>
+              <v-alert type="warning" dense outlined class="ma-2" v-if="!nonAlcoholScreeningResultsSummary.response || !nonAlcoholScreeningResultsSummary.response.length">No responses</v-alert>
+            </div>
           </details>
         </div>
         <details>
@@ -84,13 +90,12 @@ export default {
       ready: false
     };
   },
-  created() {
-    
-  },
-  mounted() {
-  },
   methods: {
     interventionCallback() {
+      if (!this.intervention) {
+        this.ready = true;
+        return;
+      }
       // Have the web worker evaluate the CQL and return the brief interventions
       // Unpack the alcohol brief interventions and assimilate into the component
       this.alcoholScreeningResultsSummary = this.intervention.alcohol_screening_results_summary;
@@ -102,7 +107,7 @@ export default {
           referral: this.intervention.alcohol_counseling_suggestions.referral
         };
       }
-      this.alcoholPatientEducationResources = marked(this.intervention.alcohol_patient_education_resources);
+      this.alcoholPatientEducationResources = this.intervention.alcohol_patient_education_resources ? marked(this.intervention.alcohol_patient_education_resources) : "";
 
       // Unpack the non-alcohol brief interventions and assimilate into the component
       this.nonAlcoholScreeningResultsSummary = this.intervention.non_alcohol_screening_results_summary;
@@ -113,7 +118,7 @@ export default {
           referral: this.intervention.non_alcohol_related_counseling_suggestions.referral
         };
       }
-      this.nonAlcoholRelatedPatientEducationResources = marked(this.intervention.non_alcohol_related_patient_education_resources);
+      this.nonAlcoholRelatedPatientEducationResources = this.intervention.non_alcohol_related_patient_education_resources ? marked(this.intervention.non_alcohol_related_patient_education_resources) : "";
       this.ready = true; 
     }
   }

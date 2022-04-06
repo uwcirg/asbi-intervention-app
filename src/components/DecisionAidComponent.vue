@@ -6,6 +6,7 @@
           <div id="your-responses" class="decision-aid">
             <h3>Your Responses</h3>
             <span v-html="yourResponses"></span>
+             <v-alert type="warning" dense outlined class="ma-2" v-if="!yourResponses">No response provided</v-alert>
           </div>
           <div id="your-drinking" class="decision-aid">
             <h3>{{yourDrinking.title}}</h3>
@@ -154,7 +155,7 @@ export default {
       let decisionAids = this.intervention;
 
       // Unpack the alcohol brief interventions and assimilate into the component
-      this.yourResponses = marked(decisionAids.your_responses);
+      this.yourResponses = decisionAids.your_responses ? marked(decisionAids.your_responses) : "";
       if (decisionAids.your_drinking) {
           this.yourDrinking = decisionAids.your_drinking;
         if (this.yourDrinking.you && this.yourDrinking.you.maximum_drinks_per_week) {
